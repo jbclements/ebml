@@ -3,8 +3,11 @@
 ;; functions for writing ebml elements. Might as well 
 ;; use streams, this time.
 
-#;(provide (contract-out
-          [ebml->bytes (-> (listof ebml-element?) bytes?)]))
+(provide (contract-out
+          [ebml->bytes (-> (listof ebml-element?) bytes?)]
+          [ebml-write (->* ((listof ebml-element?)) 
+                           (port?)
+                           void?)]))
 
 (define fix? exact-nonnegative-integer?)
 (define ebml-element?
@@ -16,16 +19,20 @@
 ;; given a list of ebml-elements, write them to a byte string
 (define (ebml->bytes elements)
   (define collector (open-output-bytes))
-  (for ([element elements])
-    (ebml-element-write element collector))
+  (ebml-write elements collector)
   (get-output-bytes collector))
 
+;; given a list of ebml elements and an optional port, write
+;; the encoded representation to the port
+(define (ebml-write elements [port (current-output-port)])
+  (for ([element elements])
+    (ebml-element-write element port)))
+
+;; write a single element to a port
 (define (ebml-element-write element [port (current-output-port)])
-  (match-define (list id data) (let ([ans element])
-                                 (printf "~s\n" ans)
-                                 ans))
+  (match-define (list id data) element)
   (ebml-header-id-write id port)
-  (ebml-data-length-write data port)
+  (ebml-data-length-write (ebml-data-length data) port)
   (cond [(bytes? data) (display data port)]
         [(list? data)
          (for ([element data])
@@ -38,10 +45,9 @@
   ;; safe to just re-use the data-length encoder.
   (ebml-data-length-write id port))
 
-;; given data and a port, write the encoded
+;; given length and a port, write the encoded
 ;; representation of the id to the port.
-(define (ebml-data-length-write data port)
-  (define data-len (ebml-data-length data))
+(define (ebml-data-length-write data-len port)
   (define bytes-required (data-length-encoded-length data-len))
   (define length-tagged
     (+ (arithmetic-shift #x1 (* bytes-required 7)) data-len))
@@ -113,12 +119,23 @@
                                  (list 7 (bytes 1 2)))))
                 (+ 2 1 1 1 3 1 1 2))
   
+  (define (writer->bytes f)
+    (define b (open-output-bytes))
+    (f b)
+    (get-output-bytes b))
+  
+  (check-equal? 
+   (writer->bytes (lambda (p) 
+                    (ebml-element-write 
+                     (list 6 (bytes 34 27 97)) p)))
+   (bytes #b10000110 #b10000011 34 27 97))
+  
   (check-equal? 
    (ebml->bytes
     (list (list 6 (bytes 34 27 97))
           (list 3 (list (list 2 (bytes 1 2 3))
                         (list 4 (bytes 1 2 3 4))))))
-   (bytes #b01000000 #b00000110 #b10000011 34 27 97
+   (bytes #b10000110 #b10000011 34 27 97
           #b10000011 #b10001011 
           #b10000010 #b10000011 1 2 3
           #b10000100 #b10000100 1 2 3 4)))

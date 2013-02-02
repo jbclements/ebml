@@ -21,8 +21,7 @@
     [(18) `(vec ,(rust-ebml-parse data))]
     [(19) `(vec-len ,(bytes->uint data))]
     ;; fall-through assumes it's compound:
-    [else (printf "id: ~s\n" header-id)
-          (with-handlers
+    [else (with-handlers
               ((exn:fail? 
                 (lambda (exn)
                   (error 'rust-specific-parse
