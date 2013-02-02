@@ -2,7 +2,7 @@
 
 ;; this module provides functions that parse ebml byte-strings
 
-(provide ebml-read ebml-read/optimistic)
+(provide ebml-read ebml-read/optimistic Element)
 
 (define-type Element (Rec EE (List Natural (U Bytes (Listof EE)))))
 
@@ -66,7 +66,6 @@
   (with-handlers ([exn:fail? (lambda (exn) 
                                (or fallback-bytes
                                    (raise exn)))])
-    (: sub-elements (Listof Element))
     (define sub-elements (ebml-read port))
     (for/list: : (Listof Element) ([elt : Element sub-elements])
       (match-define (list header-id (? bytes? body-bytes)) elt)
