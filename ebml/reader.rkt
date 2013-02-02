@@ -2,7 +2,7 @@
 
 ;; this module provides functions that parse ebml byte-strings
 
-(provide ebml-read #;ebml-read/optimistic)
+(provide ebml-read ebml-read/optimistic parse-element parse-elements)
 
 (define-type Element (Rec EE (List Natural (U Bytes (Listof EE)))))
 
@@ -25,8 +25,8 @@
 
 ;; a "front door" function that handles paths as
 ;; well as byte-strings
-#;#;
-(: ebml-read/optimistic : (U Bytes Path-String Input-Port) -> (U #f (Listof Element)))
+
+(: ebml-read/optimistic : (U Bytes Path-String Input-Port) -> (U Bytes (Listof Element)))
 (define (ebml-read/optimistic in-thing)
   (cond [(bytes? in-thing) (optimistic-parse 
                             (open-input-bytes in-thing)
@@ -60,8 +60,8 @@
 ;; have, e.g., a string that just happens to look like
 ;; a piece of encoded data. For better control, don't
 ;; use the optimistic-parser.
-#;#;
-(: optimistic-parse : Input-Port (U #f Bytes) -> (U #f Bytes (Listof Element)))
+
+(: optimistic-parse : Input-Port (U #f Bytes) -> (U Bytes (Listof Element)))
 (define (optimistic-parse port fallback-bytes)
   (with-handlers ([exn:fail? (lambda (exn) 
                                (or fallback-bytes
@@ -69,7 +69,7 @@
     (: sub-elements (Listof Element))
     (define sub-elements (ebml-read port))
     (for/list: : (Listof Element) ([elt : Element sub-elements])
-      (match-define (list header-id body-bytes) elt)
+      (match-define (list header-id (? bytes? body-bytes)) elt)
       (list header-id (optimistic-parse 
                        (open-input-bytes body-bytes)
                        body-bytes)))))
@@ -166,13 +166,14 @@
         [else (bytes->uint (rest l) 
                            (+ (first l) (arithmetic-shift accum 8)))]))
 
+
+
 (module+ test
   (require typed/rackunit)
   (check-equal? 
    (parse-element 
     (open-input-bytes (bytes #b10110000 #b10000001 13)))
    (list #x30 (bytes 13))))
-#;
 
 
 (module+ test
@@ -203,19 +204,19 @@
   
   (check-equal? 
    (ebml-read (bytes #b01000000 #b00000110 #b10000011 34 27 97
-                      #b10000011 #b10001011 1 2 3 4 5 6 7 8 9 10 11))
+                     #b10000011 #b10001011 1 2 3 4 5 6 7 8 9 10 11))
    (list (list 6 (bytes 34 27 97))
          (list 3 (bytes 1 2 3 4 5 6 7 8 9 10 11))))
   
   (check-equal? 
    (ebml-read (bytes #b01000000 #b00000110 #b10000011 34 27 97
-                      #b10000011 #b10001011 
-                      #b10000010 #b10000011 1 2 3
-                      #b10000100 #b10000100 1 2 3 4))
+                     #b10000011 #b10001011 
+                     #b10000010 #b10000011 1 2 3
+                     #b10000100 #b10000100 1 2 3 4))
    (list (list 6 (bytes 34 27 97))
          (list 3 (bytes #b10000010 #b10000011 1 2 3
                         #b10000100 #b10000100 1 2 3 4))))
-  #;
+  
   (check-equal? 
    (ebml-read/optimistic
     (bytes #b01000000 #b00000110 #b10000011 34 27 97
@@ -224,8 +225,7 @@
            #b10000100 #b10000100 1 2 3 4))
    (list (list 6 (bytes 34 27 97))
          (list 3 (list (list 2 (bytes 1 2 3))
-                       (list 4 (bytes 1 2 3 4))))))
-)
+                       (list 4 (bytes 1 2 3 4)))))))
 
 
 
