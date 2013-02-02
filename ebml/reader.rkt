@@ -2,7 +2,7 @@
 
 ;; this module provides functions that parse ebml byte-strings
 
-(provide ebml-read ebml-read/optimistic parse-element parse-elements)
+(provide ebml-read ebml-read/optimistic)
 
 (define-type Element (Rec EE (List Natural (U Bytes (Listof EE)))))
 
