@@ -21,6 +21,7 @@
 (define (read-ebml-sexps bytes)
   (map expand-ebml-sexp (ebml-read bytes)))
 
+;; recur on elements that are containers
 (define (expand-ebml-sexp element)
   (match element
     [(list 1 exps-bytes) 

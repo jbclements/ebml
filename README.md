@@ -2,7 +2,8 @@
 
 A racket library to read and write EBML, the "extended binary markup language."
 
-EBML is a packed format for representing structured data.
+EBML is a packed format for representing structured data. It was designed
+by the authors of the [matroska project](http://matroska.org) .
 
 ```
 element = header data
