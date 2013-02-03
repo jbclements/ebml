@@ -1,24 +1,14 @@
-#lang racket
+#lang typed/racket
 
 ;; this module provides functions that parse ebml byte-strings
 
-(provide (contract-out 
-          [ebml-read 
-           (-> (or/c path-string? bytes? port?)
-               (listof ebml-element?))]
-          [ebml-read/optimistic
-           (-> (or/c path-string? bytes? port?)
-               (listof ebml-element?))]))
+(provide ebml-read ebml-read/optimistic Element)
 
-(define fix? exact-nonnegative-integer?)
-(define ebml-element?
-  (flat-murec-contract 
-   ([ebml-element? (list/c fix? (or/c bytes?
-                                      (listof ebml-element?)))])
-   ebml-element?))
+(define-type Element (Rec EE (List Natural (U Bytes (Listof EE)))))
 
 ;; a "front door" function that handles paths as
 ;; well as byte-strings
+(: ebml-read : (U Bytes Path-String Input-Port) -> (Listof Element))
 (define (ebml-read in-thing)
   (cond [(bytes? in-thing) (parse-elements 
                             (open-input-bytes in-thing))]
@@ -35,6 +25,8 @@
 
 ;; a "front door" function that handles paths as
 ;; well as byte-strings
+
+(: ebml-read/optimistic : (U Bytes Path-String Input-Port) -> (U Bytes (Listof Element)))
 (define (ebml-read/optimistic in-thing)
   (cond [(bytes? in-thing) (optimistic-parse 
                             (open-input-bytes in-thing)
@@ -54,7 +46,7 @@
 
 ;; parse elements until running out of bytes; signal an error if
 ;; the byte-string doesn't end at the end of an element.
-#;(: ebml-read (Bytes Exact-Nonnegative-Integer -> (Listof Element)))
+(: parse-elements : Input-Port -> (Listof Element))
 (define (parse-elements port)
   (cond [(eof-object? (peek-byte port)) empty]
         [else
@@ -69,13 +61,14 @@
 ;; a piece of encoded data. For better control, don't
 ;; use the optimistic-parser.
 
+(: optimistic-parse : Input-Port (U #f Bytes) -> (U Bytes (Listof Element)))
 (define (optimistic-parse port fallback-bytes)
   (with-handlers ([exn:fail? (lambda (exn) 
                                (or fallback-bytes
                                    (raise exn)))])
     (define sub-elements (ebml-read port))
-    (for/list ([elt sub-elements])
-      (match-define (list header-id body-bytes) elt)
+    (for/list: : (Listof Element) ([elt : Element sub-elements])
+      (match-define (list header-id (? bytes? body-bytes)) elt)
       (list header-id (optimistic-parse 
                        (open-input-bytes body-bytes)
                        body-bytes)))))
@@ -83,9 +76,9 @@
 ;; bytes? fix? -> (list/c ebml-element? fix?)
 ;; given a byte string and a location, parse a single ebml element and 
 ;; return the element and the new parse position
-;(: parse-element : Bytes Exact-Nonnegative-Integer -> Parse-Result)
+(: parse-element : Input-Port -> Element)
 (define (parse-element port)
-  (define first-byte (read-byte port))
+  (define first-byte (assert (read-byte port) byte?))
   (match-define (list header-id-first-byte header-len) 
     (cond [(not (= 0 (bitwise-and #x80 first-byte)))
            (list (bitwise-and #x7F first-byte) 1)]
@@ -99,7 +92,7 @@
                        "not a legal header-id beginning byte: ~s"
                        first-byte)]))
   (define header-followup-bytes 
-    (read-bytes (sub1 header-len) port))
+    (assert (read-bytes (sub1 header-len) port) bytes?))
   (when (< (bytes-length header-followup-bytes) (sub1 header-len))
     (raise-argument-error 'parse-element 
                           "port containing complete header id"
@@ -118,8 +111,9 @@
 ;; port? fix? -> ebml-element?
 ;; given a byte string, a location, and a header ID, parse the data length
 ;; and data and return a Parse-Result
+(: parse-data-len : Input-Port Natural -> Element)
 (define (parse-data-len port header-id)
-  (define first-byte (read-byte port))
+  (define first-byte (assert (read-byte port) byte?))
   (match-define (list data-len-first-byte data-len-len)
     (cond [(not (= 0 (bitwise-and #x80 first-byte)))
            (list (bitwise-and #x7F first-byte) 1)]
@@ -140,7 +134,7 @@
           [else (error 'parse-data-len
                        "not a legal data-len beginning byte: ~s" first-byte)]))
   (define followup-data-len-bytes 
-    (read-bytes (sub1 data-len-len) port))
+    (assert (read-bytes (sub1 data-len-len) port) bytes?))
   (when (< (bytes-length followup-data-len-bytes) 
            (sub1 data-len-len))
     (raise-argument-error
@@ -152,7 +146,7 @@
                        (bytes->uint other-bits 0)))
   (cond [(= data-len (sub1 (expt 2 (* data-len-len 7))))
          (error "reserved data length id: ~s for data length len: ~s" data-len data-len-len)])
-  (define data-bytes (read-bytes data-len port))
+  (define data-bytes (assert (read-bytes data-len port) bytes?))
   (when (< (bytes-length data-bytes) 
            (sub1 data-len))
     (raise-argument-error
@@ -165,19 +159,20 @@
 ;; parses a byte string as an unsigned integer. Works for lists
 ;; of funny lengths such as three or five.
 ;; (listof byte?) fix? -> fix?
-;(: bytes->uint : (Listof Byte) Exact-Nonnegative-Integer -> Exact-Nonnegative-Integer)
+(: bytes->uint : (Listof Byte) Natural -> Natural)
 (define (bytes->uint l accum)
   (cond [(empty? l) accum]
         [else (bytes->uint (rest l) 
                            (+ (first l) (arithmetic-shift accum 8)))]))
 
+
+
 (module+ test
-  (require rackunit)
+  (require typed/rackunit)
   (check-equal? 
    (parse-element 
     (open-input-bytes (bytes #b10110000 #b10000001 13)))
    (list #x30 (bytes 13))))
-
 
 
 (module+ test
@@ -208,15 +203,15 @@
   
   (check-equal? 
    (ebml-read (bytes #b01000000 #b00000110 #b10000011 34 27 97
-                      #b10000011 #b10001011 1 2 3 4 5 6 7 8 9 10 11))
+                     #b10000011 #b10001011 1 2 3 4 5 6 7 8 9 10 11))
    (list (list 6 (bytes 34 27 97))
          (list 3 (bytes 1 2 3 4 5 6 7 8 9 10 11))))
   
   (check-equal? 
    (ebml-read (bytes #b01000000 #b00000110 #b10000011 34 27 97
-                      #b10000011 #b10001011 
-                      #b10000010 #b10000011 1 2 3
-                      #b10000100 #b10000100 1 2 3 4))
+                     #b10000011 #b10001011 
+                     #b10000010 #b10000011 1 2 3
+                     #b10000100 #b10000100 1 2 3 4))
    (list (list 6 (bytes 34 27 97))
          (list 3 (bytes #b10000010 #b10000011 1 2 3
                         #b10000100 #b10000100 1 2 3 4))))
@@ -229,32 +224,8 @@
            #b10000100 #b10000100 1 2 3 4))
    (list (list 6 (bytes 34 27 97))
          (list 3 (list (list 2 (bytes 1 2 3))
-                       (list 4 (bytes 1 2 3 4))))))
-)
+                       (list 4 (bytes 1 2 3 4)))))))
 
 
 
-#|
-;; Typed racket worked great... except I couldn't write
-;; the type of s-expressions for the result type.
-#;(require/typed rackunit
-               [check-equal? (Any Any -> Any)]
-               [check-exn ((Any -> Any) (-> Any) -> Any)])
 
-#;(define-type Element (U Element/s
-                        Element/r))
-
-#;(struct: Element/r ([ID : Symbol]
-                    [data : (U String
-                               Integer
-                               (Listof Element))])
-  #:transparent)
-#;(struct: Element/s ([ID : Exact-Nonnegative-Integer]
-                    [data : (U Bytes (Listof Element))])
-  #:transparent)
-
-#;(struct: Parse-Result ([element : Element]
-                       [bytes-pos : Exact-Nonnegative-Integer])
-  #:transparent)
-
-|#
