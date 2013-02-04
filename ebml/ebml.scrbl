@@ -36,21 +36,17 @@ is interpreted as a big-endian unsigned number.
 
 So, for instance, the byte string
 
-@verbatim{
-(bytes #b10001011)             
-}
+@code{(bytes #b10001011)}
 
 ... encodes the length 11, while the byte string 
 
-@verbatim{
-(bytes #b01000001 #b00000010)
-}
+@code{(bytes #b01000001 #b00000010)}
 
 ... encodes the length 258. Note that there is more than one
 way to encode a given length; you could also encode the length 
 11 with the byte string 
 
-@verbatim{
+@code{
 (bytes #b00100000 #b00000000 #b00001011)
 }
 
@@ -92,13 +88,14 @@ recursion into the parser. So, for instance, if we used the encoding
 scheme given above where 1 encodes a pair, 2 encodes an atom, and
 3 encodes @racket[null],
 a decoder might look like this:
-               
-@racketblock[
-(scribble:comment "ping-pong required to know when to recur:")
+    
+
+@codeblock{
+;ping-pong required to know when to recur:
 (define (read-ebml-sexps bytes)
   (map expand-ebml-sexp (ebml-read bytes)))
 
-(scribble:comment "recur on elements that are containers:")
+;recur on elements that are containers:
 (define (expand-ebml-sexp element)
   (match element
     [(list 1 exps-bytes) 
@@ -107,8 +104,7 @@ a decoder might look like this:
      (string->symbol (bytes->string/utf-8 atom-bytes))]
     [(list 3 atom-bytes)
      empty]))
-]
-}
+}}
  
  The file @filepath{examples/sexp-ebml.rkt} contains a working 
  example of this.

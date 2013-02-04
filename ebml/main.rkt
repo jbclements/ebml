@@ -2,5 +2,4 @@
 
 (require "reader.rkt"
          "writer.rkt")
-(provide (all-defined-out-from "reader.rkt"
-                               "writer.rkt"))
+(provide (all-from-out "reader.rkt" "writer.rkt"))
