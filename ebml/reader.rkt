@@ -63,7 +63,7 @@
 
 (: optimistic-parse : Input-Port (U #f Bytes) -> (U Bytes (Listof Element)))
 (define (optimistic-parse port fallback-bytes)
-  (with-handlers ([exn:fail? (lambda (exn) 
+  (with-handlers ([exn:fail? (lambda ([exn : exn:fail]) 
                                (or fallback-bytes
                                    (raise exn)))])
     (define sub-elements (ebml-read port))
