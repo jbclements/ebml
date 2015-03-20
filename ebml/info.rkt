@@ -12,6 +12,7 @@
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("examples"))
 
+(define scribblings '(("ebml.scrbl")))
 
 #;(define homepage "http://schematics.sourceforge.net/")
 #;(define url "http://schematics.sourceforge.net/")

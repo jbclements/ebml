@@ -8,7 +8,7 @@
 (require "../reader.rkt")
 
 (define (rust-ebml-parse bytes)
-  (map rust-ebml-expand (ebml-parse bytes)))
+  (map rust-ebml-expand (ebml-read bytes)))
 
 (define (rust-ebml-expand element)
   (match-define (list header-id data) element)
@@ -43,30 +43,28 @@
 
 (module+ test
   (require rackunit)
-  (check-equal? (bytes->uint (bytes 2 1 3 4)) #x02010304))
+  (check-equal? (bytes->uint (bytes 2 1 3 4)) #x02010304)
 
+  
+  (check-equal? (rust-ebml-parse
+                 #"\321\20\0\0\312\213\203foo\222\20\0\0\6\223\204\0\0\0\0\205\210\0\0\0\0\0\0\0\3\217\20\0\0\233\220\204\0\0\0\1\221\20\0\0\220\222\20\0\0\6\223\204\0\0\0\0\205\210\0\0\0\0\0\0\0\1\217\20\0\0\v\220\204\0\0\0\0\221\20\0\0\0\217\20\0\0\v\220\204\0\0\0\1\221\20\0\0\0\217\20\0\0\v\220\204\0\0\0\2\221\20\0\0\0\222\20\0\0\6\223\204\0\0\0\0\222\20\0\0\6\223\204\0\0\0\0\222\20\0\0\6\223\204\0\0\0\0\217\20\0\0\v\220\204\0\0\0\0\221\20\0\0\0\205\210\0\0\0\0\0\0\0\2\217\20\0\0\v\220\204\0\0\0\0\221\20\0\0\0\217\20\0\0\v\220\204\0\0\0\2\221\20\0\0\0")
+                '((81
+                   ((string "foo")
+                    (vec ((vec-len 0)))
+                    (int 3)
+                    (enum
+                     ((enum-vid 1)
+                      (enum-body
+                       ((vec ((vec-len 0)))
+                        (int 1)
+                        (enum ((enum-vid 0) (enum-body ())))
+                        (enum ((enum-vid 1) (enum-body ())))
+                        (enum ((enum-vid 2) (enum-body ())))
+                        (vec ((vec-len 0)))
+                        (vec ((vec-len 0)))
+                        (vec ((vec-len 0)))
+                        (enum ((enum-vid 0) (enum-body ())))
+                        (int 2)
+                        (enum ((enum-vid 0) (enum-body ())))))))
+                    (enum ((enum-vid 2) (enum-body ()))))))))
 
-(rust-ebml-parse 
- #"\321\20\0\0\312\213\203foo\222\20\0\0\6\223\204\0\0\0\0\205\210\0\0\0\0\0\0\0\3\217\20\0\0\233\220\204\0\0\0\1\221\20\0\0\220\222\20\0\0\6\223\204\0\0\0\0\205\210\0\0\0\0\0\0\0\1\217\20\0\0\v\220\204\0\0\0\0\221\20\0\0\0\217\20\0\0\v\220\204\0\0\0\1\221\20\0\0\0\217\20\0\0\v\220\204\0\0\0\2\221\20\0\0\0\222\20\0\0\6\223\204\0\0\0\0\222\20\0\0\6\223\204\0\0\0\0\222\20\0\0\6\223\204\0\0\0\0\217\20\0\0\v\220\204\0\0\0\0\221\20\0\0\0\205\210\0\0\0\0\0\0\0\2\217\20\0\0\v\220\204\0\0\0\0\221\20\0\0\0\217\20\0\0\v\220\204\0\0\0\2\221\20\0\0\0")
-
-
-;; should produce:
-#;'((81
-     ((string "foo")
-      (vec ((vec-len 0)))
-      (int 3)
-      (enum
-       ((enum-vid 1)
-        (enum-body
-         ((vec ((vec-len 0)))
-          (int 1)
-          (enum ((enum-vid 0) (enum-body ())))
-          (enum ((enum-vid 1) (enum-body ())))
-          (enum ((enum-vid 2) (enum-body ())))
-          (vec ((vec-len 0)))
-          (vec ((vec-len 0)))
-          (vec ((vec-len 0)))
-          (enum ((enum-vid 0) (enum-body ())))
-          (int 2)
-          (enum ((enum-vid 0) (enum-body ())))))))
-      (enum ((enum-vid 2) (enum-body ()))))))

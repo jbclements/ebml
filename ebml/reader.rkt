@@ -24,7 +24,9 @@
                                0 in-thing)]))
 
 ;; a "front door" function that handles paths as
-;; well as byte-strings
+;; well as byte-strings. The "optimistic" version assumes
+;; that anything that can be parsed as ebml should be, which will
+;; be incorrect for certain representations.
 
 (: ebml-read/optimistic : (U Bytes Path-String Input-Port) -> (U Bytes (Listof Element)))
 (define (ebml-read/optimistic in-thing)

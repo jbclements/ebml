@@ -53,7 +53,10 @@ way to encode a given length; you could also encode the length
 Header IDs are limited to four bytes, and data lengths are limited
 to 8.
 
-EBML has at least one big problem, which is that the packed representation is ambiguous. Specifically, there's no way to reliably distinguish data that is a sequence of elements from data that is a binary blob.
+EBML has at least one big problem, which is that the packed
+representation is ambiguous. Specifically, there's no way to
+reliably distinguish data that is a sequence of elements from
+data that is a binary blob.
 
 To choose a concrete example, if you were using EBML to encode
 s-expressions, you might choose a particular header id 
@@ -79,7 +82,9 @@ The reader and writer both use this representation of ebml-elements:
 @defmodule[reader]{
                    
 @defproc[(ebml-read (in (or/c input-port? path-string? bytes?))) ebml-element?]{
-Reads ebml elements from the given input-port, byte string, or file. It continues reading ebml elements until the source is exhausted. It signals an error if the end of the source doesn't correspond with
+Reads ebml elements from the given input-port, byte string, or file.
+It continues reading ebml elements until the source is exhausted.
+It signals an error if the end of the source doesn't correspond with
 the end of an element.
 
 Since the EBML parser has no way of knowing which elements are
