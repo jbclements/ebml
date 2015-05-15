@@ -5,4 +5,4 @@
 (define deps
   (list "base"
         "typed-racket-lib"))
-(define build-deps '("scribble-lib"))
+(define build-deps '("scribble-lib" "racket-doc"))
