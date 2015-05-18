@@ -79,7 +79,7 @@ The reader and writer both use this representation of ebml-elements:
    ebml-element?))
 ]
 
-@defmodule[reader]{
+@defmodule[ebml/reader]{
                    
 @defproc[(ebml-read (in (or/c input-port? path-string? bytes?))) ebml-element?]{
 Reads ebml elements from the given input-port, byte string, or file.
@@ -124,7 +124,7 @@ represent a simple byte stream will be interpreted as a sequence
 of bytes. }
 }
 
-@defmodule[writer]{
+@defmodule[ebml/writer]{
        
 @defproc[(ebml-write [elements (listof ebml-element?)] 
                      [port (output-port?)
