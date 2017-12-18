@@ -2,7 +2,7 @@
 
 @(require scribble/manual)
 
-@title{@bold{EBML}: A binary encoding format}
+@title{EBML: A binary encoding format}
 
 @author[(author+email "John Clements" "clements@racket-lang.org")]
 
